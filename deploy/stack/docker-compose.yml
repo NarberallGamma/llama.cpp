@@ -1,0 +1,68 @@
+name: llama-stack
+
+services:
+  llama-server:
+    image: ${LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda13}
+    container_name: llama-server
+    restart: unless-stopped
+    gpus: all
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      LLAMA_ARG_HOST: "0.0.0.0"
+      LLAMA_ARG_PORT: "8080"
+      LLAMA_ARG_MODELS_DIR: /models
+      LLAMA_ARG_N_GPU_LAYERS: ${LLAMA_N_GPU_LAYERS:-auto}
+      LLAMA_ARG_FIT: ${LLAMA_FIT:-on}
+      LLAMA_ARG_N_PARALLEL: ${LLAMA_N_PARALLEL:-1}
+      LLAMA_ARG_CTX_SIZE: ${LLAMA_CTX_SIZE:-16384}
+      LLAMA_ARG_CACHE_TYPE_K: ${LLAMA_CACHE_TYPE_K:-q8_0}
+      LLAMA_ARG_CACHE_TYPE_V: ${LLAMA_CACHE_TYPE_V:-q8_0}
+      LLAMA_ARG_N_PREDICT: ${LLAMA_N_PREDICT:-4096}
+      LLAMA_ARG_MODELS_MAX: ${LLAMA_MODELS_MAX:-1}
+      LLAMA_ARG_REASONING_EFFORT: ${LLAMA_REASONING_EFFORT:-low}
+      LLAMA_ARG_ENDPOINT_METRICS: "1"
+      LLAMA_API_KEY: ${LLAMA_API_KEY:-sk-local}
+    volumes:
+      - ${MODELS_DIR:-./models}:/models:rw
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  open-webui:
+    image: ${OPENWEBUI_IMAGE:-ghcr.io/open-webui/open-webui:v0.11.0}
+    container_name: llama-open-webui
+    restart: unless-stopped
+    environment:
+      ENABLE_OLLAMA_API: "false"
+      ENABLE_OPENAI_API: "true"
+      OPENAI_API_BASE_URL: http://llama-server:8080/v1
+      OPENAI_API_KEY: ${LLAMA_API_KEY:-sk-local}
+      WEBUI_AUTH: "false"
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:-change-me-local}
+      AIOHTTP_CLIENT_TIMEOUT: "600"
+      AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST: "60"
+    volumes:
+      - ./data/open-webui:/app/backend/data
+    expose:
+      - "8080"
+    depends_on:
+      llama-server:
+        condition: service_started
+
+  proxy:
+    image: nginx:1.28-alpine
+    container_name: llama-proxy
+    restart: unless-stopped
+    ports:
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8088}:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - llama-server
+      - open-webui
