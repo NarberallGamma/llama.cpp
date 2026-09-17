@@ -153,3 +153,12 @@ a.out.*
 
 AGENTS.local.md
 .pi/SYSTEM.md
+
+# Local compose stack (see deploy/stack/)
+
+/deploy/stack/.env
+/deploy/stack/.env.bak*
+/deploy/stack/*.bak*
+/deploy/stack/data/
+/deploy/stack/models/**
+!/deploy/stack/models/README.md

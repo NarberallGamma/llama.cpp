@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "enabled_providers": ["llama.cpp"],
+  "model": "llama.cpp/Qwen3.8-27B-UD-Q3_K_XL",
+  "provider": {
+    "llama.cpp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama-server (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:8088/v1",
+        "apiKey": "sk-local"
+      },
+      "models": {
+        "Qwen3.8-27B-UD-Q3_K_XL": {
+          "name": "Qwen3.8 27B Q3 (local)",
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        }
+      }
+    }
+  }
+}
